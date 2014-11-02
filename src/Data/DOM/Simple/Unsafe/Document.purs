@@ -16,6 +16,7 @@ foreign import unsafeSetTitle
   \  return function (src) {          \
   \    return function () {           \
   \      src.title = value;           \
+  \      return {};                   \
   \    };                             \
   \  };                               \
   \}" :: forall eff a. String -> a -> (Eff (dom :: DOM | eff) Unit)
@@ -32,6 +33,7 @@ foreign import unsafeSetBody
   \  return function (src) {          \
   \    return function () {           \
   \      src.body = value;            \
+  \      return {};                   \
   \    };                             \
   \  };                               \
   \}" :: forall eff a. HTMLElement -> a -> (Eff (dom :: DOM | eff) Unit)

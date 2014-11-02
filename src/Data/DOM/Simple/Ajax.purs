@@ -31,6 +31,7 @@ import Data.Maybe (Maybe(..))
 
 import Data.DOM.Simple.Types
 import Data.DOM.Simple.Unsafe.Ajax
+import Data.DOM.Simple.Unsafe.Utils
 
 data ReadyState = Unsent | Opened | HeadersReceived | Loading | Done
 
@@ -77,14 +78,6 @@ instance showResponseType :: Show ResponseType where
   show MozBlob = "moz-blob"
   show MozChunkedText = "moz-chunked-text"
   show MozChunkedArrayBuffer = "moz-chunked-arraybuffer"
-
-foreign import maybeFn """
-  function maybeFn(nothing, just, a) {
-    return a == null ? nothing : just(a);
-  }""" :: forall a b. Fn3 b (a -> b) a b
-
-maybe :: forall a. a -> Maybe a
-maybe = runFn3 maybeFn Nothing Just
 
 foreign import makeXMLHttpRequest
   "function makeXMLHttpRequest() {  \
@@ -149,7 +142,7 @@ response x = do
     MozChunkedArrayBuffer -> get ArrayBufferData
   where
     get :: forall eff a o. (a -> HttpData o) -> Eff (dom :: DOM | eff) (HttpData o)
-    get t = runFn3 maybeFn NoData t <$> unsafeResponse x
+    get t = runFn3 ensureFn NoData t <$> unsafeResponse x
 
 foreign import responseText
   "function responseText(obj) {         \
@@ -192,7 +185,7 @@ foreign import getAllResponseHeaders
   \}" :: forall eff. XMLHttpRequest -> (Eff (dom :: DOM | eff) String)
 
 getResponseHeader :: forall eff. String -> XMLHttpRequest -> Eff (dom :: DOM | eff) (Maybe String)
-getResponseHeader k x = maybe <$> runFn2 unsafeGetResponseHeader x k
+getResponseHeader k x = ensure <$> runFn2 unsafeGetResponseHeader x k
 
 foreign import overrideMimeType
   "function overrideMimeType(mime) {        \

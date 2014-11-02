@@ -1,55 +1,52 @@
 module Data.DOM.Simple.Unsafe.Events where
 
-import Control.Monad.Eff
-
+import Data.Function
 import Data.DOM.Simple.Types
 
-foreign import unsafeAddEventListener
-  "function unsafeAddEventListener(targ) {              \
-  \  return function (cb) {                             \
-  \     return function (src) {                         \
-  \       return function () {                          \
-  \         src.addEventListener(targ, function(evt) {  \
-  \           cb(evt)();                                \
-  \         });                                         \
-  \       };                                            \
-  \     };                                              \
-  \  };                                                 \
-  \}" :: forall eff t e b. String -> (e -> Eff (dom :: DOM | t) Unit) -> b -> (Eff (dom :: DOM | eff) Unit)
+foreign import unsafeAddEventListener """
+  function unsafeAddEventListener(src, targ, cb) {
+    return function () {
+      function listener(evt) {
+        cb(evt)();
+      };
+      src.addEventListener(targ, listener, false);
+      return listener;
+    };
+  }""" :: forall eff t e b. Fn3 b String (e -> DOMEff t Unit) (DOMEff eff (DOMEventListener e))
 
-foreign import unsafeRemoveEventListener
-  "function unsafeRemoveEventListener(targ) {               \
-  \  return function (cb) {                                 \
-  \     return function (src) {                             \
-  \       return function () {                              \
-  \         src.removeEventListener(targ, function (evt) {  \
-  \           cb(evt)();                                    \
-  \         });                                             \
-  \       };                                                \
-  \     };                                                  \
-  \  };                                                     \
-  \}" :: forall eff t e b. String -> (e -> Eff (dom :: DOM | t) Unit) -> b -> (Eff (dom :: DOM | eff) Unit)
+foreign import unsafeAsMouseEvent """
+  function unsafeAsMouseEvent(obj) {
+    return obj instanceof MouseEvent ? obj : null;
+  }""" :: forall o e. o -> e
 
-foreign import unsafeEventTarget
-  "function unsafeEventTarget(event) { \
-  \  return function () {         \
-  \    return event.target;       \
-  \  };                           \
-  \}" :: forall eff a. DOMEvent -> (Eff (dom :: DOM | eff) a)
+foreign import unsafeAsKeyboardEvent """
+  function unsafeAsKeyboardEvent(obj) {
+    return obj instanceof KeyboardEvent ? obj : null;
+  }""" :: forall o e. o -> e
+
+foreign import unsafeRemoveEventListener """
+  function unsafeRemoveEventListener(src, targ, listener) {
+    return function () {
+      src.removeEventListener(targ, listener, false);
+      return {};
+    };
+  }""" :: forall eff e b. Fn3 b String (DOMEventListener e) (DOMEff eff Unit)
 
 foreign import unsafeStopPropagation
   "function unsafeStopPropagation(event) { \
   \  return function () {           \
   \    event.stopPropagation();      \
+  \    return {};                   \
   \  }                              \
-  \}" :: forall eff. DOMEvent -> (Eff (dom :: DOM | eff) Unit)
+  \}" :: forall eff e. e -> DOMEff eff Unit
 
 foreign import unsafePreventDefault
   "function unsafePreventDefault(event) { \
   \  return function () {           \
   \    event.preventDefault();      \
+  \    return {};                   \
   \  }                              \
-  \}" :: forall eff. DOMEvent -> (Eff (dom :: DOM | eff) Unit)
+  \}" :: forall eff e. e -> DOMEff eff Unit
 
 -- XXX Wallpaper over the fact that some browsers don't support
 -- KeyboardEvent.key yet.  It's a hack, since it doesn't correctly
@@ -61,46 +58,4 @@ foreign import unsafeEventKey
   \       ? String.fromCharCode(event.keyCode) \
   \       : event.key;                         \
   \  };                                        \
-  \}" :: forall eff. DOMEvent -> (Eff (dom :: DOM | eff) String)
-
-foreign import unsafeEventKeyCode
-  "function unsafeEventKeyCode(event) { \
-  \  return function() {                \
-  \    return event.keyCode             \
-  \  };                                 \
-  \}" :: forall eff. DOMEvent -> (Eff (dom :: DOM | eff) Number)
-
-foreign import unsafeEventNumberProp
-  "function unsafeEventNumberProp(prop) {  \
-  \  return function (event) {             \
-  \    return function() {                 \
-  \      return event[prop];               \
-  \    };                                  \
-  \  };                                    \
-  \}" :: forall eff. String -> DOMEvent -> (Eff (dom :: DOM | eff) Number)
-
-foreign import unsafeEventStringProp
-  "function unsafeEventStringProp(prop) {  \
-  \  return function (event) {             \
-  \    return function() {                 \
-  \      return event[prop];               \
-  \    };                                  \
-  \  };                                    \
-  \}" :: forall eff. String -> DOMEvent -> (Eff (dom :: DOM | eff) String)
-
-foreign import unsafeEventBooleanProp
-  "function unsafeEventBooleanProp(prop) { \
-  \  return function (event) {             \
-  \    return function() {                 \
-  \      return !!event[prop];             \
-  \    };                                  \
-  \  };                                    \
-  \}" :: forall eff. String -> DOMEvent -> (Eff (dom :: DOM | eff) Boolean)
-
--- XXX really should be returning an HTMLAbstractView here...
-foreign import unsafeEventView
-  "function unsafeEventView(event) { \
-  \  return function() {             \
-  \    return event.view;            \
-  \  };                              \
-  \}" :: forall eff. DOMEvent -> (Eff (dom :: DOM | eff) HTMLWindow)
+  \}" :: forall eff e. e -> DOMEff eff String

@@ -103,6 +103,7 @@
       setTitle :: forall eff. String -> b -> Eff (dom :: DOM | eff) Unit
       body :: forall eff. b -> Eff (dom :: DOM | eff) HTMLElement
       setBody :: forall eff. HTMLElement -> b -> Eff (dom :: DOM | eff) Unit
+      documentElement :: forall eff. b -> Eff (dom :: DOM | eff) HTMLElement
 
 
 ### Type Class Instances
@@ -209,86 +210,118 @@
 
 ### Type Classes
 
-    class Event e where
-      eventTarget :: forall eff a. e -> Eff (dom :: DOM | eff) a
-      stopPropagation :: forall eff. e -> Eff (dom :: DOM | eff) Unit
-      preventDefault :: forall eff. e -> Eff (dom :: DOM | eff) Unit
+    class (Object e, EventType t) <= Event e t where
+      asMouseEvent :: e -> Maybe DOMMouseEvent
+      asKeyboardEvent :: e -> Maybe DOMKeyboardEvent
 
-    class (Event e) <= KeyboardEvent e where
-      keyboardEventType :: forall eff. e -> Eff (dom :: DOM | eff) KeyboardEventType
-      key :: forall eff. e -> Eff (dom :: DOM | eff) String
-      keyCode :: forall eff. e -> Eff (dom :: DOM | eff) Number
-      keyLocation :: forall eff. e -> Eff (dom :: DOM | eff) KeyLocation
-      altKey :: forall eff. e -> Eff (dom :: DOM | eff) Boolean
-      ctrlKey :: forall eff. e -> Eff (dom :: DOM | eff) Boolean
-      metaKey :: forall eff. e -> Eff (dom :: DOM | eff) Boolean
-      shiftKey :: forall eff. e -> Eff (dom :: DOM | eff) Boolean
+    class (Object a) <= EventTarget a where
 
-    class KeyboardEventTarget b where
-      addKeyboardEventListener :: forall e t ta. (KeyboardEvent e) => KeyboardEventType -> (e -> Eff (dom :: DOM | t) Unit) -> b -> Eff (dom :: DOM | ta) Unit
-      removeKeyboardEventListener :: forall e t ta. (KeyboardEvent e) => KeyboardEventType -> (e -> Eff (dom :: DOM | t) Unit) -> b -> Eff (dom :: DOM | ta) Unit
+    class (Show t) <= EventType t where
+      read :: String -> t
 
-    class (Event e) <= MouseEvent e where
-      mouseEventType :: forall eff. e -> Eff (dom :: DOM | eff) MouseEventType
-      screenX :: forall eff. e -> Eff (dom :: DOM | eff) Number
-      screenY :: forall eff. e -> Eff (dom :: DOM | eff) Number
-
-    class MouseEventTarget b where
-      addMouseEventListener :: forall e t ta. (MouseEvent e) => MouseEventType -> (e -> Eff (dom :: DOM | t) Unit) -> b -> Eff (dom :: DOM | ta) Unit
-      removeMouseEventListener :: forall e t ta. (MouseEvent e) => MouseEventType -> (e -> Eff (dom :: DOM | t) Unit) -> b -> Eff (dom :: DOM | ta) Unit
-
-    class Read s where
-      read :: String -> s
-
-    class (Event e) <= UIEvent e where
-      view :: forall eff. e -> Eff (dom :: DOM | eff) HTMLWindow
-      detail :: forall eff. e -> Eff (dom :: DOM | eff) Number
-
-    class UIEventTarget b where
-      addUIEventListener :: forall e t ta. (UIEvent e) => UIEventType -> (e -> Eff (dom :: DOM | t) Unit) -> b -> Eff (dom :: DOM | ta) Unit
-      removeUIEventListener :: forall e t ta. (UIEvent e) => UIEventType -> (e -> Eff (dom :: DOM | t) Unit) -> b -> Eff (dom :: DOM | ta) Unit
+    class (Event e t) <= UIEvent e t where
 
 
 ### Type Class Instances
 
-    instance eventDOMEvent :: Event DOMEvent
+    instance eventEvent :: Event DOMEvent String
 
-    instance keyboardEventDOMEvent :: KeyboardEvent DOMEvent
+    instance eventObject :: Object DOMEvent
 
-    instance keyboardEventTargetHTMLDocument :: KeyboardEventTarget HTMLDocument
+    instance eventTypeString :: EventType String
 
-    instance keyboardEventTargetHTMLElement :: KeyboardEventTarget HTMLElement
+    instance keyboardEvent :: Event DOMKeyboardEvent KeyboardEventType
 
-    instance keyboardEventTargetHTMLWindow :: KeyboardEventTarget HTMLWindow
+    instance keyboardEventObject :: Object DOMKeyboardEvent
 
-    instance keyboardEventTypeRead :: Read KeyboardEventType
+    instance keyboardEventType :: EventType KeyboardEventType
 
     instance keyboardEventTypeShow :: Show KeyboardEventType
 
-    instance mouseEventDOMEvent :: MouseEvent DOMEvent
+    instance keyboardUIEvent :: UIEvent DOMKeyboardEvent KeyboardEventType
 
-    instance mouseEventTargetHTMLDocument :: MouseEventTarget HTMLDocument
+    instance mouseEvent :: Event DOMMouseEvent MouseEventType
 
-    instance mouseEventTargetHTMLElement :: MouseEventTarget HTMLElement
+    instance mouseEventObject :: Object DOMMouseEvent
 
-    instance mouseEventTargetHTMLWindow :: MouseEventTarget HTMLWindow
-
-    instance mouseEventTypeRead :: Read MouseEventType
+    instance mouseEventType :: EventType MouseEventType
 
     instance mouseEventTypeShow :: Show MouseEventType
 
-    instance uiEventDOMEvent :: UIEvent DOMEvent
+    instance mouseUIEvent :: UIEvent DOMMouseEvent MouseEventType
 
-    instance uiEventTargetHTMLWindow :: UIEventTarget HTMLWindow
+    instance uiEvent :: Event DOMUIEvent UIEventType
 
-    instance uiEventTypeRead :: Read UIEventType
+    instance uiEventObject :: Object DOMUIEvent
+
+    instance uiEventType :: EventType UIEventType
 
     instance uiEventTypeShow :: Show UIEventType
+
+    instance uiUIEvent :: UIEvent DOMUIEvent UIEventType
 
 
 ### Values
 
+    addEventListener :: forall eff e t b. (EventType t, Event e t, EventTarget b) => t -> (e -> DOMEff eff Unit) -> b -> DOMEff eff (DOMEventListener e)
+
+    altKey :: forall eff. DOMKeyboardEvent -> DOMEff eff Boolean
+
+    ctrlKey :: forall eff. DOMKeyboardEvent -> DOMEff eff Boolean
+
+    detail :: forall eff e. (UIEvent e) => e -> DOMEff eff Number
+
+    eventTarget :: forall eff e. (Event e) => e -> DOMEff eff DOMEventTarget
+
+    eventType :: forall eff e t. (EventType t, Event e t) => e -> DOMEff eff t
+
+    key :: forall eff. DOMKeyboardEvent -> DOMEff eff String
+
+    keyCode :: forall eff. DOMKeyboardEvent -> DOMEff eff Number
+
+    keyLocation :: forall eff. DOMKeyboardEvent -> DOMEff eff KeyLocation
+
+    metaKey :: forall eff. DOMKeyboardEvent -> DOMEff eff Boolean
+
+    preventDefault :: forall eff e. (Event e) => e -> DOMEff eff Unit
+
+    removeEventListener :: forall eff e t b. (EventType t, Event e t, EventTarget b) => t -> DOMEventListener e -> b -> DOMEff eff Unit
+
+    screenX :: forall eff e. DOMMouseEvent -> DOMEff eff Number
+
+    screenY :: forall eff e. DOMMouseEvent -> DOMEff eff Number
+
+    shiftKey :: forall eff. DOMKeyboardEvent -> DOMEff eff Boolean
+
+    stopPropagation :: forall eff e. (Event e) => e -> DOMEff eff Unit
+
     toKeyLocation :: Number -> KeyLocation
+
+    view :: forall eff e. (UIEvent e) => e -> DOMEff eff HTMLWindow
+
+
+## Module Data.DOM.Simple.Node
+
+### Type Classes
+
+    class (EventTarget a) <= Node a where
+
+
+## Module Data.DOM.Simple.Object
+
+### Type Classes
+
+    class Object a where
+
+
+### Type Class Instances
+
+    instance objectObject :: Object DOMObject
+
+
+### Values
+
+    asObject :: forall o. (Object o) => o -> DOMObject
 
 
 ## Module Data.DOM.Simple.Sugar
@@ -318,9 +351,23 @@
 
     data DOM :: !
 
+    type DOMEff eff = Eff (dom :: DOM | eff)
+
     data DOMEvent :: *
 
+    data DOMEventListener :: * -> *
+
+    data DOMEventTarget :: *
+
+    data DOMKeyboardEvent :: *
+
     data DOMLocation :: *
+
+    data DOMMouseEvent :: *
+
+    data DOMObject :: *
+
+    data DOMUIEvent :: *
 
     data HTMLDocument :: *
 
@@ -424,27 +471,28 @@
 
 ### Values
 
-    unsafeAddEventListener :: forall eff t e b. String -> (e -> Eff (dom :: DOM | t) Unit) -> b -> Eff (dom :: DOM | eff) Unit
+    unsafeAddEventListener :: forall eff t e b. Fn3 b String (e -> DOMEff t Unit) (DOMEff eff (DOMEventListener e))
 
-    unsafeEventBooleanProp :: forall eff. String -> DOMEvent -> Eff (dom :: DOM | eff) Boolean
+    unsafeAsKeyboardEvent :: forall o e. o -> e
 
-    unsafeEventKey :: forall eff. DOMEvent -> Eff (dom :: DOM | eff) String
+    unsafeAsMouseEvent :: forall o e. o -> e
 
-    unsafeEventKeyCode :: forall eff. DOMEvent -> Eff (dom :: DOM | eff) Number
+    unsafeEventKey :: forall eff e. e -> DOMEff eff String
 
-    unsafeEventNumberProp :: forall eff. String -> DOMEvent -> Eff (dom :: DOM | eff) Number
+    unsafePreventDefault :: forall eff e. e -> DOMEff eff Unit
 
-    unsafeEventStringProp :: forall eff. String -> DOMEvent -> Eff (dom :: DOM | eff) String
+    unsafeRemoveEventListener :: forall eff e b. Fn3 b String (DOMEventListener e) (DOMEff eff Unit)
 
-    unsafeEventTarget :: forall eff a. DOMEvent -> Eff (dom :: DOM | eff) a
+    unsafeStopPropagation :: forall eff e. e -> DOMEff eff Unit
 
-    unsafeEventView :: forall eff. DOMEvent -> Eff (dom :: DOM | eff) HTMLWindow
 
-    unsafePreventDefault :: forall eff. DOMEvent -> Eff (dom :: DOM | eff) Unit
+## Module Data.DOM.Simple.Unsafe.Object
 
-    unsafeRemoveEventListener :: forall eff t e b. String -> (e -> Eff (dom :: DOM | t) Unit) -> b -> Eff (dom :: DOM | eff) Unit
+### Values
 
-    unsafeStopPropagation :: forall eff. DOMEvent -> Eff (dom :: DOM | eff) Unit
+    unsafeAsObject :: forall o. o -> DOMObject
+
+    unsafeObjectProp :: forall eff o a. String -> o -> DOMEff eff a
 
 
 ## Module Data.DOM.Simple.Unsafe.Sugar
@@ -458,7 +506,11 @@
 
 ### Values
 
+    coerceBoolean :: forall a. a -> Boolean
+
     ensure :: forall a. a -> Maybe a
+
+    ensureFn :: forall a b. Fn3 b (a -> b) a b
 
     showImpl :: forall a. a -> String
 

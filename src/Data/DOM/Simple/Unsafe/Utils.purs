@@ -1,17 +1,25 @@
-module Data.DOM.Simple.Unsafe.Utils where
+module Data.DOM.Simple.Unsafe.Utils 
+  ( ensureFn
+  , ensure
+  , coerceBoolean
+  , showImpl
+  ) where
 
+import Data.Function
 import Data.Maybe
 
-forceImport = Just "a"
+foreign import ensureFn """
+  function ensureFn(nothing, just, v) {
+    return v == null ? nothing : just(v);
+  }""" :: forall a b. Fn3 b (a -> b) a b
 
-foreign import ensure
-  "function ensure(v) {                         \
-  \  if (v === undefined || v === null) {       \
-  \    return new Data_Maybe.Nothing;           \
-  \  } else {                                   \
-  \    return new Data_Maybe.Just(v);           \
-  \  }                                          \
-  \}" :: forall a. a -> Maybe a
+ensure :: forall a. a -> Maybe a
+ensure = runFn3 ensureFn Nothing Just
+
+foreign import coerceBoolean """
+  function coerceBoolean(x) {
+    return !!x;
+  }""" :: forall a. a -> Boolean
 
 foreign import showImpl
   "function showImpl(v) {   \
